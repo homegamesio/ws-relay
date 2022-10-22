@@ -12,8 +12,17 @@ const broadcastServer = new WebSocketServer({ server: broadcast });
 
 const clients = {};
 
+const servers = {};
+
+let _serverId = 1;
 wss.on('connection', (ws) => {
-    console.log('wssss');
+    const serverId = _serverId++;
+    servers[serverId] = ws;
+
+    ws.on('close', () => {
+        servers[serverId] = null;
+    });
+
     ws.on('message', (message) => {
         Object.keys(clients).forEach(id => {
             console.log('need to relay message to client ' + id);
@@ -27,6 +36,13 @@ broadcastServer.on('connection', (ws) => {
     console.log('someone wants to listen');
     const wsId = id++;
     clients[wsId] = ws;
+
+    ws.on('message', (message) => {
+        console.log('need to send this back to the things connected to me');
+        Object.keys(servers).forEach(serverId => {
+            servers[serverId] && servers[serverId].send(message);
+        });
+    });
 
     ws.on('close', () => {
         clients[wsId] = null;
