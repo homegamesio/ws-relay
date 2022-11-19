@@ -2,6 +2,7 @@ const http = require("http");
 const fs = require('fs');
 const path = require('path');
 const { WebSocket, WebSocketServer } = require('ws');
+const crypto = require('crypto');
 
 const server = http.createServer();
 const broadcast = http.createServer();
@@ -15,17 +16,33 @@ const clients = {};
 const servers = {};
 
 let _serverId = 1;
+
+const generateCode = () => crypto.randomBytes(2).toString('hex').toUpperCase();
+
+const sessionCodes = {};
+
 wss.on('connection', (ws) => {
     const serverId = _serverId++;
     servers[serverId] = ws;
 
+    console.log('a broadcaster just connected to me');
+
+    const serverCode = generateCode();
+    sessionCodes[serverCode] = serverId;
+    const codePayload = {
+        type: 'code',
+        code: serverCode
+    };
+
+    ws.send(JSON.stringify(codePayload));
+
     ws.on('close', () => {
         servers[serverId] = null;
+	sessionCodes[serverCode] = null;
     });
 
     ws.on('message', (message) => {
         Object.keys(clients).forEach(id => {
-            console.log('need to relay message to client ' + id);
             clients[id] && clients[id].send(message);
         });
     });
@@ -36,12 +53,32 @@ broadcastServer.on('connection', (ws) => {
     console.log('someone wants to listen');
     const wsId = id++;
     clients[wsId] = ws;
-
+    let clientCode;
+    let connectedHgServer;
     ws.on('message', (message) => {
-        console.log('need to send this back to the things connected to me');
-        Object.keys(servers).forEach(serverId => {
-            servers[serverId] && servers[serverId].send(message);
-        });
+	// first message should be code
+	if (!clientCode) {
+	    const codePayload = JSON.parse(message);
+	    if (codePayload.type === 'code') {
+		clientCode = codePayload.code;
+		const requestedServerId = sessionCodes[clientCode];
+		if (!requestedServerId || !servers[requestedServerId]) {
+		  ws.send('error: bad code supplied');
+		  ws.close();
+		} else {
+			connectedHgServer = servers[requestedServerId];
+		}
+	    } else {
+		console.log('bad message from public client');
+		console.log(codePayload);
+	    }
+	} else {
+	   if (!connectedHgServer) {
+		console.error('not connected to hg server');
+	   } else {
+                connectedHgServer.send(message);
+	   }
+	}
     });
 
     ws.on('close', () => {
@@ -51,5 +88,3 @@ broadcastServer.on('connection', (ws) => {
 
 server.listen(81);
 broadcast.listen(82);
-
-
