@@ -1,11 +1,14 @@
 const http = require("http");
+const https = require("https");
 const fs = require('fs');
 const path = require('path');
 const { WebSocket, WebSocketServer } = require('ws');
 const crypto = require('crypto');
+const process = require('process');
 
-const server = http.createServer();
-const broadcast = http.createServer();
+const server = process.env.CERT_PATH && process.env.KEY_PATH ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
+
+const broadcast =  process.env.CERT_PATH && process.env.KEY_PATH ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
 
 const wss = new WebSocketServer({ server });
 
