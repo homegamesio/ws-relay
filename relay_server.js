@@ -49,16 +49,12 @@ wss.on('connection', (ws) => {
 
     ws.on('message', (message) => {
 	if (message.toString().startsWith('gimmeidresponse-')) {
-		console.log('got id response thing');
-		console.log(message);
 		const pieces = message.toString().split('-');
 		if (pieces.length == 3) {
 			if (!internalToClientIds[serverId]) {
 				internalToClientIds[serverId] = {};
 			}
 			internalToClientIds[serverId][pieces[1]] = pieces[2];
-			console.log('id map');
-			console.log(internalToClientIds);
 			const clientToNotify = clients[pieces[1]];
 			clientToNotify.send([2, pieces[2]]);
 		}
@@ -70,21 +66,16 @@ wss.on('connection', (ws) => {
 				lol[Number(internalToClientIds[serverId][key])] = Number(key);
 			}
 			const serverClientId = message[1];
-			console.log('looks like im sending more info about this ' + serverClientId + ', fsdfds' + serverId);
-			console.log(lol);
-			console.log(internalToClientIds);
 			const realClient = clients[lol[serverClientId]];
 			realClient && realClient.send(message);
 		} else if (message[0] === 199) {
 		    // standard proxy message, pull client id
-		    console.log(internalToClientIds);	
 			const lol = {};
 			for (let key in internalToClientIds[serverId]) {
 				lol[Number(internalToClientIds[serverId][key])] = Number(key);
 			}
+
 			const serverClientId = message[1];
-		        console.log('looks like im passing a message to this ' + serverClientId + ' gs ' + serverId);
-			console.log(internalToClientIds);
 			const realClient = clients[lol[serverClientId]];
 			realClient && realClient.send(message.slice(2));
 	
@@ -100,9 +91,8 @@ wss.on('connection', (ws) => {
 
 let id = 1;
 broadcastServer.on('connection', (ws) => {
-    console.log('someone wants to listen');
     const wsId = id++;
-    clients[wsId] = ws;
+    clients[Number(wsId)] = ws;
     let clientCode;
     let clientId;
     let connectedHgServer;
@@ -117,19 +107,36 @@ broadcastServer.on('connection', (ws) => {
 		  ws.send('error: bad code supplied');
 		  ws.close();
 		} else {
-			console.log('just did this. requesting player ID from game server');
 //			ws.send(JSON.stringify({type: 'id', payload: '' + wsId}));
 			connectedHgServer = servers[requestedServerId];
 			connectedHgServer.send('gimmeid-' + wsId);
 		}
+//	    }
+		//else if (codePayload.type === 'ready') {
+		//    console.log('dasfsdfsdfdsf');
+		//    console.log(codePayload);
+		//// reconnecting from existing known session (eg. spectator to player or vice versa)
+		//if (codePayload.code) {
+		//	console.log('dsfdsfdsf');
+		//	console.log(codePayload);
+		//	clientCode = codePayload.code;
+		//	const requestedServerId = sessionCodes[clientCode];
+		//	if (!requestedServerId || !servers[requestedServerId]) {
+		//  		ws.send('error: bad code supplied');
+		//  		ws.close();
+		//	} 
+		//	console.log('sending this here to the thing');
+		//	console.log(message.toString());
+		//	connectedHgServer = servers[requestedServerId];
+		//	connectedHgServer.send('gimmeid-' + wsId);
+	
+                //	servers[requestedServerId].send(message);
+	
+		//}
 	    } else {
 		console.log('bad message from public client');
 		console.log(codePayload);
 	    }
-	//}// else if (!clientId) {
-	//	console.log('please tell me this is an ayylmao message');
-	//	console.log(message);
-	//	console.log(message.toString());
 	} else {
 	   if (!connectedHgServer) {
 		console.error('not connected to hg server');
