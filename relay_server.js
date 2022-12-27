@@ -29,6 +29,7 @@ const internalToClientIds = {};
 wss.on('connection', (ws) => {
     const serverId = _serverId++;
     servers[serverId] = ws;
+    internalToClientIds[serverId] = {};
 
     console.log('a broadcaster just connected to me');
 
@@ -52,7 +53,10 @@ wss.on('connection', (ws) => {
 		console.log(message);
 		const pieces = message.toString().split('-');
 		if (pieces.length == 3) {
-			internalToClientIds[pieces[1]] = pieces[2];
+			if (!internalToClientIds[serverId]) {
+				internalToClientIds[serverId] = {};
+			}
+			internalToClientIds[serverId][pieces[1]] = pieces[2];
 			console.log('id map');
 			console.log(internalToClientIds);
 			const clientToNotify = clients[pieces[1]];
@@ -62,11 +66,11 @@ wss.on('connection', (ws) => {
 		if (message[0] === 2) {
 		// init message, pull client id
 			const lol = {};
-			for (let key in internalToClientIds) {
-				lol[Number(internalToClientIds[key])] = Number(key);
+			for (let key in internalToClientIds[serverId]) {
+				lol[Number(internalToClientIds[serverId][key])] = Number(key);
 			}
 			const serverClientId = message[1];
-			console.log('looks like im sending more info about this ' + serverClientId);
+			console.log('looks like im sending more info about this ' + serverClientId + ', fsdfds' + serverId);
 			console.log(lol);
 			console.log(internalToClientIds);
 			const realClient = clients[lol[serverClientId]];
@@ -75,11 +79,11 @@ wss.on('connection', (ws) => {
 		    // standard proxy message, pull client id
 		    console.log(internalToClientIds);	
 			const lol = {};
-			for (let key in internalToClientIds) {
-				lol[Number(internalToClientIds[key])] = Number(key);
+			for (let key in internalToClientIds[serverId]) {
+				lol[Number(internalToClientIds[serverId][key])] = Number(key);
 			}
 			const serverClientId = message[1];
-		        console.log('looks like im passing a message to this ' + serverClientId);
+		        console.log('looks like im passing a message to this ' + serverClientId + ' gs ' + serverId);
 			console.log(internalToClientIds);
 			const realClient = clients[lol[serverClientId]];
 			realClient.send(message.slice(2));
