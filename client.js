@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocket } = require('ws');
 
-//const broadcastServer = `ws://54.176.82.103:82`;
-const broadcastServer = `ws://localhost:82`;
+const broadcastServer = `ws://54.176.82.103:82`;
+//const broadcastServer = `ws://localhost:82`;
 
 const ws = new WebSocket(broadcastServer);
 

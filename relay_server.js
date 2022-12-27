@@ -6,6 +6,10 @@ const { WebSocket, WebSocketServer } = require('ws');
 const crypto = require('crypto');
 const process = require('process');
 
+console.log("UHHHH");
+console.log(process.env.CERT_PATH);
+console.log(process.env.KEY_PATH);
+
 const server = process.env.CERT_PATH && process.env.KEY_PATH ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
 
 const broadcast =  process.env.CERT_PATH && process.env.KEY_PATH ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
@@ -91,3 +95,5 @@ broadcastServer.on('connection', (ws) => {
 
 server.listen(81);
 broadcast.listen(82);
+
+
