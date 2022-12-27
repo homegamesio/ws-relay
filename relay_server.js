@@ -74,7 +74,7 @@ wss.on('connection', (ws) => {
 			console.log(lol);
 			console.log(internalToClientIds);
 			const realClient = clients[lol[serverClientId]];
-			realClient.send(message);
+			realClient && realClient.send(message);
 		} else if (message[0] === 199) {
 		    // standard proxy message, pull client id
 		    console.log(internalToClientIds);	
@@ -86,7 +86,7 @@ wss.on('connection', (ws) => {
 		        console.log('looks like im passing a message to this ' + serverClientId + ' gs ' + serverId);
 			console.log(internalToClientIds);
 			const realClient = clients[lol[serverClientId]];
-			realClient.send(message.slice(2));
+			realClient && realClient.send(message.slice(2));
 	
 		} else {
 		// something else
