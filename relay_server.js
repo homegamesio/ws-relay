@@ -5,13 +5,15 @@ const { WebSocketServer } = require('ws');
 const crypto = require('crypto');
 const process = require('process');
 
-const server = process.env.CERT_PATH && process.env.KEY_PATH ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
+const isSecure = process.env.CERT_PATH && process.env.KEY_PATH;
 
-const broadcast =  process.env.CERT_PATH && process.env.KEY_PATH ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
+const broadcastListenerServer = isSecure ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
 
-const wss = new WebSocketServer({ server });
+const broadcasterServer =  isSecure ? https.createServer({ key: fs.readFileSync(process.env.KEY_PATH), cert: fs.readFileSync(process.env.CERT_PATH) }) : http.createServer();
 
-const broadcastServer = new WebSocketServer({ server: broadcast });
+const broadcastListenerSocket = new WebSocketServer({ server: broadcastListenerServer });
+
+const broadcasterSocket = new WebSocketServer({ server: broadcasterServer });
 
 const clients = {};
 
@@ -28,7 +30,7 @@ const internalToClientIds = {};
 // which server is a person in
 const consumerIdToServerId = {};
 
-wss.on('connection', (ws) => {
+broadcastListenerSocket.on('connection', (ws) => {
     const serverId = _serverId++;
     servers[serverId] = ws;
     internalToClientIds[serverId] = {};
@@ -91,7 +93,7 @@ wss.on('connection', (ws) => {
 });
 
 let id = 1;
-broadcastServer.on('connection', (ws) => {
+broadcasterSocket.on('connection', (ws) => {
     const wsId = id++;
     clients[Number(wsId)] = ws;
     let clientCode;
@@ -140,5 +142,5 @@ broadcastServer.on('connection', (ws) => {
     });
 });
 
-server.listen(81);
-broadcast.listen(82);
+broadcastListenerServer.listen(81);
+broadcasterServer.listen(82);
