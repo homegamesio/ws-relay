@@ -30,6 +30,14 @@ const internalToClientIds = {};
 // which server is a person in
 const consumerIdToServerId = {};
 
+const invertMap = (map) => {
+    const inverted = {};
+    for (const key in map) {
+        inverted[map[key]] = key;
+    }
+    return inverted;
+};
+
 broadcastListenerSocket.on('connection', (ws) => {
     const serverId = _serverId++;
     servers[serverId] = ws;
@@ -45,12 +53,13 @@ broadcastListenerSocket.on('connection', (ws) => {
     ws.send(JSON.stringify(codePayload));
 
     ws.on('close', () => {
-        servers[serverId] = null;
-        sessionCodes[serverCode] = null;
+        delete servers[serverId];
+        delete sessionCodes[serverCode];
+        delete internalToClientIds[serverId];
     });
 
     ws.on('message', (message) => {
-        if (message.toString().startsWith('gimmeidresponse-')) {
+        if (message.toString().startsWith('idres-')) {
             const pieces = message.toString().split('-');
             if (pieces.length == 3) {
                 if (!internalToClientIds[serverId]) {
@@ -64,22 +73,15 @@ broadcastListenerSocket.on('connection', (ws) => {
         } else {
             if (message[0] === 2) {
                 // init message, pull client id
-                const lol = {};
-                for (const key in internalToClientIds[serverId]) {
-                    lol[Number(internalToClientIds[serverId][key])] = Number(key);
-                }
+                const clientToInternalIds = invertMap(internalToClientIds[serverId]);
                 const serverClientId = message[1];
-                const realClient = clients[lol[serverClientId]];
+                const realClient = clients[clientToInternalIds[serverClientId]];
                 realClient && realClient.send(message);
             } else if (message[0] === 199) {
             // standard proxy message, pull client id
-                const lol = {};
-                for (const key in internalToClientIds[serverId]) {
-                    lol[Number(internalToClientIds[serverId][key])] = Number(key);
-                }
-
+                const clientToInternalIds = invertMap(internalToClientIds[serverId]);
                 const serverClientId = message[1];
-                const realClient = clients[lol[serverClientId]];
+                const realClient = clients[clientToInternalIds[serverClientId]];
                 realClient && realClient.send(message.slice(2));
     
             } else {
@@ -110,7 +112,7 @@ broadcasterSocket.on('connection', (ws) => {
                     ws.close();
                 } else {
                     connectedHgServer = servers[requestedServerId];
-                    connectedHgServer.send('gimmeid-' + wsId);
+                    connectedHgServer.send('idreq-' + wsId);
                 }
             } else {
                 console.log('bad message from public client');
@@ -134,7 +136,6 @@ broadcasterSocket.on('connection', (ws) => {
         const connectedServerId = consumerIdToServerId[wsId];
         if (connectedServerId) {
             const serverClientId = internalToClientIds[connectedServerId][wsId];
-            console.log('server client id ' + serverClientId);
             connectedHgServer && connectedHgServer.send('close-' + serverClientId);
             delete internalToClientIds[connectedServerId][wsId];
             delete consumerIdToServerId[wsId];
