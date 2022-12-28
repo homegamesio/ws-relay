@@ -55,7 +55,19 @@ broadcastListenerSocket.on('connection', (ws) => {
     ws.on('close', () => {
         delete servers[serverId];
         delete sessionCodes[serverCode];
+
         delete internalToClientIds[serverId];
+
+        const serverIdsToClientIds = invertMap(consumerIdToServerId);
+	let keysToDelete = [];
+	for (let key in consumerIdToServerId) {
+		if (consumerIdToServerId[key] === serverId) {
+			keysToDelete.push(key);
+		}
+	}
+	for (let i in keysToDelete) {
+		delete consumerIdToServerId[keysToDelete[i]];
+	}
     });
 
     ws.on('message', (message) => {
